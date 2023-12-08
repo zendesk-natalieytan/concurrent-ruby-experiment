@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 require 'faraday'
-require 'concurrent'
+require 'concurrent-ruby' # updated require
 
-# Api Client to compare sequential vs cocurrent requests using promises
+# Api Client to compare sequential vs concurrent requests using promises
 # https://pokeapi.co/ (API Documentation)
 class PokemonTypesApiClient
   BASE_URL = 'https://pokeapi.co/api/v2/type'
@@ -26,14 +26,13 @@ class PokemonTypesApiClient
 
   def bulk_pokemon_types_with_promise
     requests = (1..TOTAL_NUMBERS).map { |number| pokemon_type_with_promise(number) }
-    # Resolve all promises, compile results into an array and sort it
-    requests.map { |promise| handle_pokemon_type_request(promise.method(:value)) }.compact.sort
+    requests.map { |future| handle_pokemon_type_request(future.method(:value)) }.compact.sort
   end
 
   private
 
   def pokemon_type_with_promise(number)
-    request_with_promise(method: :get, endpoint: number.to_s).execute
+    request_with_promise(method: :get, endpoint: number.to_s)
   end
 
   def pokemon_type(number)
@@ -49,7 +48,7 @@ class PokemonTypesApiClient
   end
 
   def request_with_promise(method:, endpoint:, params: {}, headers: {})
-    Concurrent::Promise.execute { request(method: method, endpoint: endpoint, params: params, headers: headers) }
+    Concurrent::Promises.future { request(method: method, endpoint: endpoint, params: params, headers: headers) }
   end
 
   def handle_pokemon_type_request(proc)
