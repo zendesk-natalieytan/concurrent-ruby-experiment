@@ -25,8 +25,15 @@ class PokemonTypesApiClient
   end
 
   def bulk_pokemon_types_with_promise
-    requests = (1..TOTAL_NUMBERS).map { |number| pokemon_type_with_promise(number) }
-    requests.map { |future| handle_pokemon_type_request(future.method(:value)) }.compact.sort
+    futures = (1..TOTAL_NUMBERS).map do |number|
+      pokemon_type_with_promise(number)
+        .then { |response| handle_pokemon_type_request(-> { response }) }
+        .rescue { |_e| nil } # if an error occurs, we return nil
+    end
+
+    combined_future = Concurrent::Promises.zip(*futures)
+    values = combined_future.value!
+    values.compact.sort
   end
 
   private
